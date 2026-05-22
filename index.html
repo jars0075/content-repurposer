@@ -430,7 +430,21 @@ function renderOutput(data) {
   (data.linkedin_posts || []).forEach((post, i) => {
     const d = document.createElement('div');
     d.className = 'post-card';
-    d.innerHTML = `<div class="post-label">Post ${i+1} of ${data.linkedin_posts.length}</div><div class="post-text">${esc(post)}</div><button class="copy-btn" onclick="copyText(${JSON.stringify(post)},this)">Copy</button>`;
+
+    const label = document.createElement('div');
+    label.className = 'post-label';
+    label.textContent = `Post ${i+1} of ${data.linkedin_posts.length}`;
+
+    const text = document.createElement('div');
+    text.className = 'post-text';
+    text.textContent = post;
+
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.onclick = () => copyText(post, btn);
+
+    d.append(label, text, btn);
     li.appendChild(d);
   });
 

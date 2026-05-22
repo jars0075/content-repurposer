@@ -12,7 +12,7 @@ Short punchy sentences. Active voice. No em dashes. No exclamation marks.
 
 Return ONLY valid JSON with exactly these keys:
 - "title": short descriptive title of the source content (string)
-- "linkedin_posts": array of exactly 3 LinkedIn posts (each 150-300 words, max 3 hashtags each)
+- "linkedin_posts": array of exactly 3 strings (each 150-300 words, max 3 hashtags each)
 - "twitter_thread": array of 8-12 tweet strings (each under 280 chars, first tweet is the hook)
 - "email_newsletter": object with keys:
     subject_line (string),
@@ -117,6 +117,12 @@ export default async function handler(req, res) {
     } catch {
       console.error('JSON parse error. Raw:', raw.slice(0, 300));
       return res.status(500).json({ error: 'Failed to parse AI response. Try again.' });
+    }
+
+    if (Array.isArray(parsed.linkedin_posts)) {
+      parsed.linkedin_posts = parsed.linkedin_posts.map(p =>
+        typeof p === 'string' ? p : (p.text || p.content || p.post || Object.values(p).find(v => typeof v === 'string') || '')
+      );
     }
 
     return res.status(200).json(parsed);
