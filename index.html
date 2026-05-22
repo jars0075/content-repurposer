@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Repurposing Agent</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f9f9f8;
+    --surface: #ffffff;
+    --border: #e4e2dd;
+    --border-strong: #c9c7c0;
+    --text: #1a1a18;
+    --text-secondary: #6b6b67;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .page { max-width: 740px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+  .header { margin-bottom: 2rem; }
+  .header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; }
+  .header p { font-size: 0.925rem; color: var(--text-secondary); margin-top: 0.35rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  .mode-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    width: fit-content;
+    margin-bottom: 1rem;
+  }
+  .mode-btn {
+    padding: 0.42rem 1rem;
+    font-size: 0.85rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.1s, color 0.1s;
+  }
+  .mode-btn.active { background: var(--text); color: #fff; }
+
+  input[type="text"], textarea {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.9rem;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    resize: vertical;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: var(--accent); }
+  textarea { min-height: 160px; line-height: 1.55; }
+  ::placeholder { color: var(--text-secondary); opacity: 0.55; }
+
+  .btn-generate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn-generate:hover { background: var(--accent-hover); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .btn-generate.loading .spinner { display: block; }
+  .btn-generate.loading .btn-label { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-msg {
+    font-size: 0.82rem;
+    text-align: center;
+    margin-top: 0.6rem;
+    color: var(--text-secondary);
+    min-height: 1.2em;
+  }
+
+  .error-banner {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 1rem;
+    font-size: 0.875rem;
+    margin-top: 0.75rem;
+    display: none;
+  }
+  .error-banner.show { display: block; }
+
+  .output-section { display: none; }
+  .output-section.show { display: block; }
+
+  .output-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+  }
+  .tab-btn {
+    padding: 0.55rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--text); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .post-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.75rem;
+    position: relative;
+  }
+  .post-card:last-child { margin-bottom: 0; }
+  .post-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.55rem;
+  }
+  .post-text { font-size: 0.9rem; line-height: 1.65; white-space: pre-wrap; padding-right: 3.5rem; }
+
+  .copy-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.28rem 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.1s;
+  }
+  .copy-btn:hover { border-color: var(--border-strong); color: var(--text); }
+  .copy-btn.copied { background: var(--success-light); border-color: #bbf7d0; color: var(--success); }
+
+  .tweet {
+    display: flex;
+    gap: 10px;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .tweet:last-of-type { border-bottom: none; }
+  .tweet-num { font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); min-width: 20px; padding-top: 3px; }
+  .tweet-body { flex: 1; }
+  .tweet-text { font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; }
+  .tweet-chars { font-size: 0.7rem; color: var(--text-secondary); margin-top: 3px; }
+  .tweet-chars.over { color: #dc2626; }
+  .tweet-copy {
+    padding: 0.25rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.1s;
+  }
+  .tweet-copy:hover { background: var(--bg); color: var(--text); }
+  .tweet-copy.copied { background: var(--success-light); border-color: #bbf7d0; color: var(--success); }
+
+  .copy-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    margin-top: 0.9rem;
+    transition: all 0.1s;
+  }
+  .copy-all-btn:hover { border-color: var(--border-strong); color: var(--text); }
+  .copy-all-btn.copied { background: var(--success-light); border-color: #bbf7d0; color: var(--success); }
+
+  .email-field { margin-bottom: 1rem; }
+  .email-field-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+  .email-subject { font-size: 0.95rem; font-weight: 500; }
+  .email-value { font-size: 0.9rem; line-height: 1.65; white-space: pre-wrap; }
+  .email-takeaways { list-style: none; }
+  .email-takeaways li {
+    font-size: 0.9rem;
+    padding: 0.28rem 0 0.28rem 1rem;
+    position: relative;
+    line-height: 1.55;
+  }
+  .email-takeaways li::before { content: '→'; position: absolute; left: 0; color: var(--text-secondary); }
+
+  .footer {
+    text-align: center;
+    margin-top: 2.5rem;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>Content Repurposing Agent</h1>
+    <p>Turn any blog post or article into LinkedIn posts, a Twitter/X thread, and an email newsletter — instantly.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Source content</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnUrl" onclick="setMode('url')">URL</button>
+      <button class="mode-btn" id="btnText" onclick="setMode('text')">Paste text</button>
+    </div>
+
+    <div id="urlWrap">
+      <input type="text" id="urlField" placeholder="https://your-blog.com/post-title" />
+    </div>
+    <div id="textWrap" style="display:none">
+      <textarea id="textField" placeholder="Paste your blog post, article, or any long-form content here..."></textarea>
+    </div>
+
+    <button class="btn-generate" id="genBtn" onclick="generate()">
+      <div class="spinner"></div>
+      <span class="btn-label">Generate content</span>
+    </button>
+    <div class="status-msg" id="statusMsg"></div>
+    <div class="error-banner" id="errBanner"></div>
+  </div>
+
+  <div class="output-section" id="outputSection">
+    <div class="card">
+      <div class="output-meta" id="outputMeta">Output</div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('linkedin')">LinkedIn</button>
+        <button class="tab-btn" onclick="switchTab('twitter')">Twitter / X</button>
+        <button class="tab-btn" onclick="switchTab('email')">Email</button>
+      </div>
+      <div class="tab-panel active" id="tab-linkedin"></div>
+      <div class="tab-panel" id="tab-twitter"></div>
+      <div class="tab-panel" id="tab-email"></div>
+    </div>
+  </div>
+
+  <div class="footer">Powered by Claude AI</div>
+</div>
+
+<script>
+let mode = 'url';
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('urlWrap').style.display = m === 'url' ? '' : 'none';
+  document.getElementById('textWrap').style.display = m === 'text' ? '' : 'none';
+  document.getElementById('btnUrl').classList.toggle('active', m === 'url');
+  document.getElementById('btnText').classList.toggle('active', m === 'text');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['linkedin','twitter','email'][i] === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.classList.add('copied');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1800);
+  });
+}
+
+function showError(msg) {
+  const el = document.getElementById('errBanner');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function setStatus(msg) {
+  document.getElementById('statusMsg').textContent = msg;
+}
+
+async function fetchUrl(url) {
+  setStatus('Fetching article...');
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const r = await fetch(proxy);
+  if (!r.ok) throw new Error('Could not fetch that URL. Try pasting the text instead.');
+  const data = await r.json();
+  if (!data.contents) throw new Error('No content returned from URL. Try pasting the text instead.');
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(data.contents, 'text/html');
+  ['nav','footer','script','style','aside','header'].forEach(t => doc.querySelectorAll(t).forEach(e => e.remove()));
+  const main = doc.querySelector('article') || doc.querySelector('main') || doc.body;
+  const text = (main?.innerText || main?.textContent || '').trim();
+  if (text.length < 200) throw new Error('Not enough readable content found at that URL. Try pasting the text instead.');
+  return text;
+}
+
+async function generate() {
+  const btn = document.getElementById('genBtn');
+  const errEl = document.getElementById('errBanner');
+  errEl.classList.remove('show');
+  setStatus('');
+
+  let content = '', sourceLabel = 'pasted content';
+
+  if (mode === 'url') {
+    const url = document.getElementById('urlField').value.trim();
+    if (!url) return showError('Please enter a URL.');
+    btn.classList.add('loading'); btn.disabled = true;
+    try { content = await fetchUrl(url); sourceLabel = url; }
+    catch (e) { btn.classList.remove('loading'); btn.disabled = false; setStatus(''); return showError(e.message); }
+  } else {
+    content = document.getElementById('textField').value.trim();
+    if (!content) return showError('Please paste some content.');
+  }
+
+  btn.classList.add('loading'); btn.disabled = true;
+  setStatus('Generating LinkedIn posts, thread, and email...');
+
+  try {
+    const resp = await fetch('/api/repurpose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, sourceLabel })
+    });
+
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Server error. Please try again.');
+
+    setStatus('');
+    renderOutput(data);
+    document.getElementById('outputSection').classList.add('show');
+    document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    setStatus('');
+    showError(e.message);
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderOutput(data) {
+  document.getElementById('outputMeta').textContent = data.title || 'Output';
+
+  // LinkedIn
+  const li = document.getElementById('tab-linkedin');
+  li.innerHTML = '';
+  (data.linkedin_posts || []).forEach((post, i) => {
+    const d = document.createElement('div');
+    d.className = 'post-card';
+    d.innerHTML = `<div class="post-label">Post ${i+1} of ${data.linkedin_posts.length}</div><div class="post-text">${esc(post)}</div><button class="copy-btn" onclick="copyText(${JSON.stringify(post)},this)">Copy</button>`;
+    li.appendChild(d);
+  });
+
+  // Twitter
+  const tw = document.getElementById('tab-twitter');
+  const thread = data.twitter_thread || [];
+  tw.innerHTML = thread.map((t, i) => {
+    const over = t.length > 280;
+    return `<div class="tweet"><div class="tweet-num">${i+1}/</div><div class="tweet-body"><div class="tweet-text">${esc(t)}</div><div class="tweet-chars ${over?'over':''}">${t.length} chars</div></div><button class="tweet-copy" onclick="copyText(${JSON.stringify(t)},this)">Copy</button></div>`;
+  }).join('');
+  const cab = document.createElement('button');
+  cab.className = 'copy-all-btn';
+  cab.textContent = 'Copy full thread';
+  cab.onclick = () => copyText(thread.map((t,i)=>`${i+1}/ ${t}`).join('\n\n'), cab);
+  tw.appendChild(cab);
+
+  // Email
+  const em = data.email_newsletter || {};
+  const emailFull = [`Subject: ${em.subject_line||''}`, '', em.intro||'', '', 'Key takeaways:', ...(em.key_takeaways||[]).map(t=>`→ ${t}`), '', em.cta||''].join('\n');
+  const eEl = document.getElementById('tab-email');
+  eEl.innerHTML = `
+    <div class="email-field"><div class="email-field-label">Subject line</div><div class="email-subject">${esc(em.subject_line||'')}</div></div>
+    <div class="email-field"><div class="email-field-label">Opening</div><div class="email-value">${esc(em.intro||'')}</div></div>
+    <div class="email-field"><div class="email-field-label">Key takeaways</div><ul class="email-takeaways">${(em.key_takeaways||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>
+    <div class="email-field"><div class="email-field-label">Call to action</div><div class="email-value">${esc(em.cta||'')}</div></div>
+  `;
+  const ecab = document.createElement('button');
+  ecab.className = 'copy-all-btn';
+  ecab.textContent = 'Copy full email';
+  ecab.onclick = () => copyText(emailFull, ecab);
+  eEl.appendChild(ecab);
+}
+</script>
+</body>
+</html>

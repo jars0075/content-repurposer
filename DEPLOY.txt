@@ -1,0 +1,99 @@
+HOW TO DEPLOY — Content Repurposing Agent
+==========================================
+Live URL in under 10 minutes. Free. No credit card.
+
+THE PROJECT CONTAINS:
+  index.html          → the client-facing web app
+  api/repurpose.js    → serverless function (holds your API key)
+  vercel.json         → Vercel configuration
+  DEPLOY.txt          → this file
+
+
+──────────────────────────────────────────────────────────
+STEP 1 — Create a free Vercel account
+──────────────────────────────────────────────────────────
+Go to: https://vercel.com/signup
+Sign up with GitHub, GitLab, or email. Free plan is fine.
+
+
+──────────────────────────────────────────────────────────
+STEP 2 — Upload the project (no Git required)
+──────────────────────────────────────────────────────────
+Option A — Drag and drop (easiest):
+  1. Go to: https://vercel.com/new
+  2. Click "Browse" or drag the entire "content-repurposer-vercel" folder
+     onto the upload area
+  3. Vercel will detect the project structure automatically
+  4. Click "Deploy" (don't change any settings)
+
+Option B — Vercel CLI:
+  1. Install: npm install -g vercel
+  2. Open Terminal, cd into the content-repurposer-vercel folder
+  3. Run: vercel
+  4. Follow the prompts (accept all defaults)
+
+
+──────────────────────────────────────────────────────────
+STEP 3 — Add your Anthropic API key (critical)
+──────────────────────────────────────────────────────────
+After the first deploy:
+  1. Go to your project dashboard on vercel.com
+  2. Click "Settings" → "Environment Variables"
+  3. Add a new variable:
+       Name:  ANTHROPIC_API_KEY
+       Value: sk-ant-... (your key from console.anthropic.com)
+       Environment: Production, Preview, Development (tick all three)
+  4. Click "Save"
+  5. Go to "Deployments" → click the three dots on your latest deploy → "Redeploy"
+
+Your API key is now secure on Vercel's servers. It is never exposed
+to the client or visible in the browser.
+
+
+──────────────────────────────────────────────────────────
+STEP 4 — Share the URL
+──────────────────────────────────────────────────────────
+Vercel gives you a URL like:
+  https://content-repurposer-vercel.vercel.app
+
+Share this with your client. They open it in any browser,
+paste a URL or text, and get outputs in seconds.
+No login. No API key. No installs.
+
+To use a custom domain (e.g. repurpose.yourclientdomain.com):
+  Settings → Domains → Add domain → follow DNS instructions
+
+
+──────────────────────────────────────────────────────────
+COST BREAKDOWN
+──────────────────────────────────────────────────────────
+Vercel hosting:       Free (Hobby plan, 100 GB bandwidth/mo)
+Anthropic API:        ~$0.03–0.08 per repurpose run (Claude Opus)
+
+At 50 runs/month = ~$2–4 in API costs.
+You can set spend limits at: console.anthropic.com → Billing → Limits
+
+
+──────────────────────────────────────────────────────────
+MAKING UPDATES
+──────────────────────────────────────────────────────────
+To change the brand voice, number of posts, or add new formats:
+  1. Edit api/repurpose.js (the SYSTEM_PROMPT variable)
+  2. Re-upload or run "vercel --prod" from the CLI
+  3. Changes go live in ~30 seconds
+
+To add a logo or brand colours:
+  1. Edit index.html — change the <h1> text and CSS :root variables
+  2. Re-deploy
+
+
+──────────────────────────────────────────────────────────
+UPGRADING TO A PAID PRODUCT LATER
+──────────────────────────────────────────────────────────
+When you're ready to charge clients:
+  1. Add Clerk or Auth0 for login (free tiers available)
+  2. Add Stripe for payment + usage metering
+  3. Move from a shared Anthropic key to per-client billing
+  4. Each upgrade is additive — no need to rebuild from scratch
+
+──────────────────────────────────────────────────────────
