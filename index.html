@@ -371,39 +371,22 @@ function setStatus(msg) {
   document.getElementById('statusMsg').textContent = msg;
 }
 
-async function fetchUrl(url) {
-  setStatus('Fetching article...');
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const r = await fetch(proxy);
-  if (!r.ok) throw new Error('Could not fetch that URL. Try pasting the text instead.');
-  const data = await r.json();
-  if (!data.contents) throw new Error('No content returned from URL. Try pasting the text instead.');
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(data.contents, 'text/html');
-  ['nav','footer','script','style','aside','header'].forEach(t => doc.querySelectorAll(t).forEach(e => e.remove()));
-  const main = doc.querySelector('article') || doc.querySelector('main') || doc.body;
-  const text = (main?.innerText || main?.textContent || '').trim();
-  if (text.length < 200) throw new Error('Not enough readable content found at that URL. Try pasting the text instead.');
-  return text;
-}
-
 async function generate() {
   const btn = document.getElementById('genBtn');
   const errEl = document.getElementById('errBanner');
   errEl.classList.remove('show');
   setStatus('');
 
-  let content = '', sourceLabel = 'pasted content';
+  let body;
 
   if (mode === 'url') {
     const url = document.getElementById('urlField').value.trim();
     if (!url) return showError('Please enter a URL.');
-    btn.classList.add('loading'); btn.disabled = true;
-    try { content = await fetchUrl(url); sourceLabel = url; }
-    catch (e) { btn.classList.remove('loading'); btn.disabled = false; setStatus(''); return showError(e.message); }
+    body = { url };
   } else {
-    content = document.getElementById('textField').value.trim();
+    const content = document.getElementById('textField').value.trim();
     if (!content) return showError('Please paste some content.');
+    body = { content };
   }
 
   btn.classList.add('loading'); btn.disabled = true;
@@ -413,7 +396,7 @@ async function generate() {
     const resp = await fetch('/api/repurpose', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, sourceLabel })
+      body: JSON.stringify(body)
     });
 
     if (!resp.ok) {

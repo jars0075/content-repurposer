@@ -1,6 +1,6 @@
 // api/repurpose.js
 // Vercel serverless function — keeps the Anthropic API key server-side.
-// Receives { content, sourceLabel } from the frontend, returns repurposed JSON.
+// Accepts { url } or { content, sourceLabel } from the frontend.
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 
@@ -22,8 +22,28 @@ Return ONLY valid JSON with exactly these keys:
 
 Return ONLY the JSON object. No markdown fences. No commentary.`;
 
+function extractText(html) {
+  return html
+    .replace(/<(script|style|nav|footer|header|aside)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#?\w+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function fetchUrl(url) {
+  const r = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentBot/1.0)' },
+    redirect: 'follow',
+  });
+  if (!r.ok) throw new Error(`Could not fetch URL (${r.status}). Try pasting the text instead.`);
+  const html = await r.text();
+  const text = extractText(html);
+  if (text.length < 200) throw new Error('Not enough readable content found at that URL. Try pasting the text instead.');
+  return text;
+}
+
 export default async function handler(req, res) {
-  // CORS — allow your frontend origin in production
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -31,15 +51,27 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { content, sourceLabel } = req.body || {};
-
-  if (!content || typeof content !== 'string' || content.trim().length < 100) {
-    return res.status(400).json({ error: 'Content is too short or missing.' });
-  }
+  const { url, content: rawContent, sourceLabel } = req.body || {};
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'Server is not configured with an API key. Contact the site owner.' });
+  }
+
+  let content = rawContent || '';
+  let label = sourceLabel || 'pasted content';
+
+  if (url) {
+    try {
+      content = await fetchUrl(url);
+      label = url;
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+  }
+
+  if (!content || typeof content !== 'string' || content.trim().length < 100) {
+    return res.status(400).json({ error: 'Content is too short or missing.' });
   }
 
   // Truncate to ~6000 words to stay within token limits
@@ -60,7 +92,7 @@ export default async function handler(req, res) {
         system: SYSTEM_PROMPT,
         messages: [{
           role: 'user',
-          content: `Repurpose this content:\n\n<source label="${sourceLabel || 'unknown'}">\n${truncated}\n</source>\n\nReturn valid JSON only.`
+          content: `Repurpose this content:\n\n<source label="${label}">\n${truncated}\n</source>\n\nReturn valid JSON only.`
         }]
       })
     });
