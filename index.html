@@ -330,7 +330,7 @@
     </div>
   </div>
 
-  <div class="footer">Powered by Claude AI</div>
+  <div class="footer">Designed by Ergopy Production Agents</div>
 </div>
 
 <script>
@@ -416,8 +416,11 @@ async function generate() {
       body: JSON.stringify({ content, sourceLabel })
     });
 
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data.error || `Server error (${resp.status}). Please try again.`);
+    }
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Server error. Please try again.');
 
     setStatus('');
     renderOutput(data);
