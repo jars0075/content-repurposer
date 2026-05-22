@@ -23,6 +23,6 @@ npx vercel --prod
 ## Key constraints
 
 - **No `Co-Authored-By:` in commit messages** — Vercel interprets it as a team account and halts deployment.
-- Model in use: `claude-sonnet-4-6`. Do not change to `claude-opus-4-6` (invalid ID).
+- Model in use: `claude-haiku-4-5-20251001`. Must stay fast — Vercel's function timeout is tight. Do not switch to Sonnet or Opus (too slow, causes 504).
 - The serverless function must stay under 30s total (Anthropic call + parsing). Input is truncated to 6000 words before sending.
 - The frontend calls `resp.ok` before `resp.json()` — keep this order to handle non-JSON gateway errors gracefully.
