@@ -15,6 +15,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Valid email required.' });
   }
 
+  const DISPOSABLE_DOMAINS = ['mailinator.com','guerrillamail.com','tempmail.com','throwam.com','sharklasers.com','yopmail.com','trashmail.com','dispostable.com','maildrop.cc','getairmail.com'];
+  const domain = email.split('@')[1].toLowerCase();
+  if (DISPOSABLE_DOMAINS.includes(domain)) {
+    return res.status(400).json({ error: 'Please use a real email address.' });
+  }
+
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DATABASE_ID;
 
