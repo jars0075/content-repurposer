@@ -1,7 +1,6 @@
 {
   "functions": {
-    "api/repurpose.js": {
-      "maxDuration": 30
-    }
+    "api/repurpose.js": { "maxDuration": 30 },
+    "api/subscribe.js": { "maxDuration": 10 }
   }
 }

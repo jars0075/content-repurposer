@@ -319,6 +319,17 @@
     <div class="error-banner" id="errBanner"></div>
   </div>
 
+  <div class="card" id="emailGate" style="display:none; text-align:center;">
+    <div class="card-label">Your content is ready</div>
+    <p style="font-size:0.9rem; color:var(--text-secondary); margin:0.5rem 0 1.25rem;">Enter your email to unlock your LinkedIn posts, Twitter thread, and email newsletter.</p>
+    <input type="email" id="gateEmailField" placeholder="you@company.com" style="margin-bottom:0.75rem;" />
+    <button class="btn-generate" id="emailSubmitBtn" onclick="submitEmail()">
+      <div class="spinner"></div>
+      <span class="btn-label">Unlock my content</span>
+    </button>
+    <div class="error-banner" id="emailErrBanner" style="text-align:left;"></div>
+  </div>
+
   <div class="output-section" id="outputSection">
     <div class="card">
       <div class="output-meta" id="outputMeta">Output</div>
@@ -338,6 +349,7 @@
 
 <script>
 let mode = 'url';
+let pendingData = null;
 
 function setMode(m) {
   mode = m;
@@ -409,13 +421,55 @@ async function generate() {
     const data = await resp.json();
 
     setStatus('');
-    renderOutput(data);
-    document.getElementById('outputSection').classList.add('show');
-    document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (localStorage.getItem('repurposer_email')) {
+      renderOutput(data);
+      document.getElementById('outputSection').classList.add('show');
+      document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      pendingData = data;
+      document.getElementById('emailGate').style.display = '';
+      document.getElementById('emailGate').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   } catch (e) {
     setStatus('');
     showError(e.message);
   } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function submitEmail() {
+  const email = document.getElementById('gateEmailField').value.trim();
+  const errEl = document.getElementById('emailErrBanner');
+  const btn = document.getElementById('emailSubmitBtn');
+  errEl.classList.remove('show');
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (!resp.ok) {
+      const d = await resp.json().catch(() => ({}));
+      throw new Error(d.error || 'Something went wrong. Please try again.');
+    }
+    localStorage.setItem('repurposer_email', email);
+    document.getElementById('emailGate').style.display = 'none';
+    renderOutput(pendingData);
+    document.getElementById('outputSection').classList.add('show');
+    document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.classList.add('show');
     btn.classList.remove('loading'); btn.disabled = false;
   }
 }
